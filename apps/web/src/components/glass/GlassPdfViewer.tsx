@@ -35,17 +35,7 @@ interface BBoxStyle {
   text: string
 }
 
-function getBBoxStyle(idx: number, isCovered: boolean): BBoxStyle {
-  if (isCovered) {
-    return {
-      label: `Line #${idx + 1} · Completed`,
-      border: 'rgba(16, 185, 129, 0.85)',
-      bg: 'rgba(16, 185, 129, 0.18)',
-      glow: '0 0 16px rgba(16, 185, 129, 0.45)',
-      text: '#6ee7b7',
-    }
-  }
-
+function getBBoxStyle(idx: number): BBoxStyle {
   return {
     label: `Line #${idx + 1}`,
     border: 'rgba(34, 211, 238, 0.85)',
@@ -248,7 +238,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
   const [spotlightMode, setSpotlightMode] = useState(false)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [coveredBBoxIds, setCoveredBBoxIds] = useState<Set<string>>(new Set())
+
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const activeBBoxRef = useRef<HTMLDivElement | null>(null)
@@ -264,19 +254,6 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
     () => doc?.bboxes.filter((b) => b.pageIndex === currentPage - 1) ?? [],
     [doc, currentPage]
   )
-
-  // Track covered/visited paragraphs as active moves
-  useEffect(() => {
-    if (!doc || activeParagraphIdx < 0 || activeParagraphIdx >= doc.paragraphs.length) return
-    const activePara = doc.paragraphs[activeParagraphIdx]
-    if (activePara) {
-      setCoveredBBoxIds((prev) => {
-        const next = new Set(prev)
-        next.add(activePara.bboxId)
-        return next
-      })
-    }
-  }, [doc, activeParagraphIdx])
 
   // Auto-scroll to active bbox when it changes
   useEffect(() => {
@@ -364,8 +341,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
     )
   }
 
-  const coveredCount = coveredBBoxIds.size
-  const coveragePct = totalParagraphs > 0 ? Math.round((coveredCount / totalParagraphs) * 100) : 0
+  const coveragePct = totalParagraphs > 0 ? Math.round((activeParagraphIdx + 1) / totalParagraphs * 100) : 0
 
   return (
     <div
@@ -514,7 +490,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                 border: '1px solid rgba(56,189,248,0.18)',
                 borderRadius: '8px',
               }}
-              title={`${coveredCount} of ${totalParagraphs} chunks covered`}
+              title={`${activeParagraphIdx + 1} of ${totalParagraphs} chunks read`}
             >
               <CheckCircle2 size={13} color="#10b981" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -666,7 +642,6 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
               const pg = i + 1
               const isSel = currentPage === pg
               const pageBBoxes = doc?.bboxes.filter((b) => b.pageIndex === i) ?? []
-              const hasCovered = pageBBoxes.some((b) => coveredBBoxIds.has(b.id))
 
               return (
                 <button
@@ -715,7 +690,6 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                     {pageBBoxes.map((b, idx) => {
                       const isBBoxActive =
                         activeParagraphIdx !== -1 && doc?.paragraphs[activeParagraphIdx]?.bboxId === b.id
-                      const isCovered = coveredBBoxIds.has(b.id)
 
                       return (
                         <div
@@ -728,13 +702,9 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                             height: `${Math.max(b.height, 6)}%`,
                             backgroundColor: isBBoxActive
                               ? 'rgba(6, 182, 212, 0.85)'
-                              : isCovered
-                              ? 'rgba(16, 185, 129, 0.55)'
                               : 'rgba(148, 163, 184, 0.25)',
                             border: isBBoxActive
                               ? '1px solid #38bdf8'
-                              : isCovered
-                              ? '1px solid #10b981'
                               : 'none',
                             borderRadius: '1px',
                             boxShadow: isBBoxActive ? '0 0 6px rgba(6, 182, 212, 0.9)' : 'none',
@@ -757,18 +727,6 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                     >
                       p.{pg}
                     </span>
-                    {hasCovered && (
-                      <span
-                        style={{
-                          width: '4px',
-                          height: '4px',
-                          borderRadius: '50%',
-                          background: '#10b981',
-                          boxShadow: '0 0 4px #10b981',
-                        }}
-                        title="Page contains covered material"
-                      />
-                    )}
                   </div>
                 </button>
               )
@@ -877,8 +835,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
 
                   const isActive = activeParagraphIdx === globalIdx
                   const isHovered = hoveredIdx === globalIdx
-                  const isCovered = coveredBBoxIds.has(para.bboxId)
-                  const bboxStyle = getBBoxStyle(globalIdx, isCovered)
+                  const bboxStyle = getBBoxStyle(globalIdx)
 
                   return (
                     <div
@@ -902,15 +859,11 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                           ? `2px solid ${bboxStyle.border}`
                           : isHovered
                           ? `1.5px dashed ${bboxStyle.border}`
-                          : isCovered
-                          ? '1px solid rgba(16, 185, 129, 0.35)'
                           : '1px solid rgba(56,189,248,0.15)',
                         background: isActive
                           ? bboxStyle.bg
                           : isHovered
                           ? 'rgba(6,182,212,0.08)'
-                          : isCovered
-                          ? 'rgba(16, 185, 129, 0.05)'
                           : 'transparent',
                         boxShadow: isActive ? bboxStyle.glow : 'none',
                         transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
