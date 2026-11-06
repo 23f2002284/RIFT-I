@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import { GlassLeftNav } from '../../components/glass/GlassLeftNav'
 import { GlassPdfViewer } from '../../components/glass/GlassPdfViewer'
@@ -48,6 +48,16 @@ function HorizHandle({ onDoubleClick }: { onDoubleClick?: () => void }) {
 export function GlassReaderPage({ doc, onBack, initialPage = 1, onPageChange }: Props) {
   const [activeParagraphIdx, setActiveParagraphIdx] = useState(0)
   const [isDictating, setIsDictating] = useState(false)
+
+  // Align active paragraph with initialPage on initial load/refresh
+  useEffect(() => {
+    if (doc && initialPage > 1) {
+      const firstOnPage = doc.paragraphs.findIndex((p) => (p.pageIndex ?? 0) === initialPage - 1)
+      if (firstOnPage >= 0) {
+        setActiveParagraphIdx(firstOnPage)
+      }
+    }
+  }, [doc, initialPage])
 
   const handleBBoxClick    = (idx: number) => setActiveParagraphIdx(idx)
   const handleBlockClick   = (idx: number) => setActiveParagraphIdx(idx)

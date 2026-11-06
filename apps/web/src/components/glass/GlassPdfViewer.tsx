@@ -59,6 +59,17 @@ function CornerBrackets({ color = 'rgba(34,211,238,0.9)' }: { color?: string }) 
   )
 }
 
+const pdfDocCache = new Map<string, Promise<pdfjsLib.PDFDocumentProxy>>()
+
+function getCachedPdf(url: string): Promise<pdfjsLib.PDFDocumentProxy> {
+  let p = pdfDocCache.get(url)
+  if (!p) {
+    p = pdfjsLib.getDocument({ url }).promise
+    pdfDocCache.set(url, p)
+  }
+  return p
+}
+
 /** Renders a single PDF page onto a canvas and hosts overlays within exact canvas boundaries */
 function PdfPageContainer({
   pdfUrl,
@@ -72,6 +83,7 @@ function PdfPageContainer({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [pageSize, setPageSize] = useState<{ width: number; height: number } | null>(null)
   const [status, setStatus] = useState<'loading' | 'done' | 'error'>('loading')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let renderTask: any = null
@@ -79,9 +91,10 @@ function PdfPageContainer({
     setStatus('loading')
     ;(async () => {
       try {
-        const pdf = await pdfjsLib.getDocument({ url: pdfUrl }).promise
+        const pdf = await getCachedPdf(pdfUrl)
         if (cancelled) return
-        const page = await pdf.getPage(pageNum)
+        const validPageNum = Math.max(1, Math.min(pageNum, pdf.numPages))
+        const page = await pdf.getPage(validPageNum)
         if (cancelled) return
         const vp = page.getViewport({ scale: 1.0 })
         const canvas = canvasRef.current
@@ -98,6 +111,8 @@ function PdfPageContainer({
           const isCancelled = err && typeof err === 'object' && 'name' in err && (err as { name: string }).name === 'RenderingCancelledException'
           if (!isCancelled) {
             console.error('PDF render error on page', pageNum, err)
+            // If cached document failed, purge cache entry
+            pdfDocCache.delete(pdfUrl)
             setStatus('error')
           }
         }
@@ -113,7 +128,7 @@ function PdfPageContainer({
         }
       }
     }
-  }, [pdfUrl, pageNum])
+  }, [pdfUrl, pageNum, retryKey])
 
   return (
     <div
@@ -122,6 +137,8 @@ function PdfPageContainer({
         display: 'inline-block',
         width: pageSize ? `${pageSize.width}px` : 'auto',
         height: pageSize ? `${pageSize.height}px` : 'auto',
+        minWidth: pageSize ? undefined : '500px',
+        minHeight: pageSize ? undefined : '650px',
         lineHeight: 0,
         borderRadius: '4px',
         boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
@@ -163,7 +180,47 @@ function PdfPageContainer({
               animation: 'spin 0.8s linear infinite',
             }}
           />
-          <span style={{ fontSize: '11px', color: '#38bdf8' }}>Extracting layout &amp; vector bounding boxes…</span>
+          <span style={{ fontSize: '11px', color: '#38bdf8' }}>Loading PDF Page {pageNum}…</span>
+        </div>
+      )}
+      {status === 'error' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '14px',
+            background: 'rgba(15,23,42,0.85)',
+            border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: '4px',
+            zIndex: 10,
+            minWidth: '400px',
+            minHeight: '550px',
+            padding: '24px',
+            textAlign: 'center',
+          }}
+        >
+          <span style={{ fontSize: '13px', color: '#fca5a5', fontWeight: 600 }}>
+            Unable to render Page {pageNum}
+          </span>
+          <button
+            type="button"
+            onClick={() => setRetryKey((k) => k + 1)}
+            style={{
+              padding: '6px 16px',
+              background: 'rgba(6,182,212,0.15)',
+              border: '1px solid rgba(6,182,212,0.4)',
+              borderRadius: '8px',
+              color: '#38bdf8',
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            Retry Loading
+          </button>
         </div>
       )}
       <canvas
@@ -253,11 +310,11 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick, initialPa
   const pageCount = doc?.pageCount ?? 0
   const totalParagraphs = doc?.paragraphs.length ?? 0
   const paragraphs = useMemo(
-    () => doc?.paragraphs.filter((p) => p.pageIndex === currentPage - 1) ?? [],
+    () => doc?.paragraphs.filter((p) => (p.pageIndex ?? 0) === currentPage - 1) ?? [],
     [doc, currentPage]
   )
   const bboxes = useMemo(
-    () => doc?.bboxes.filter((b) => b.pageIndex === currentPage - 1) ?? [],
+    () => doc?.bboxes.filter((b) => (b.pageIndex ?? 0) === currentPage - 1) ?? [],
     [doc, currentPage]
   )
 
@@ -939,7 +996,33 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick, initialPa
                 })}
               </PdfPageContainer>
             </div>
-          ) : null}
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '14px',
+                padding: '80px 20px',
+                color: '#67e8f9',
+              }}
+            >
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  border: '2px solid rgba(6,182,212,0.3)',
+                  borderTopColor: '#22d3ee',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                }}
+              />
+              <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 500 }}>
+                Loading document pages…
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

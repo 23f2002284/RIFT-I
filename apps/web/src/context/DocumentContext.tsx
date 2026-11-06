@@ -3,10 +3,11 @@
  * Handles: upload → pdf.js extraction → thumbnail → history state.
  */
 import {
-  createContext, useContext, useState, useCallback, useEffect,
+  createContext, useContext, useState, useCallback, useEffect, useMemo,
   type ReactNode,
 } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
+import { savePdfBlob, getPdfBlob, deletePdfBlob } from '../utils/pdfStorage'
 
 // Point worker at the bundled copy Vite copies to dist/
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -299,21 +300,47 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const activeDoc = documents.find((d) => d.id === activeDocId) ?? null
+  const activeDoc = useMemo(() => {
+    if (!activeDocId) return null
+    return (
+      documents.find(
+        (d) =>
+          d.id === activeDocId ||
+          d.apiId === activeDocId ||
+          `doc-${d.apiId}` === activeDocId ||
+          (d.id && activeDocId.replace(/^doc-/, '') === d.id.replace(/^doc-/, ''))
+      ) ?? null
+    )
+  }, [documents, activeDocId])
 
   // Helper to ensure a document's PDF stream / URL is loaded and content extracted
   const ensurePdfLoaded = useCallback(async (targetDoc: StoredDocument): Promise<StoredDocument> => {
     let pdfUrl = targetDoc.pdfUrl
 
-    // If PDF url is missing and we have apiId, get fresh signed URL from backend
+    // 1. If PDF url is missing, check local IndexedDB first
+    if (!pdfUrl) {
+      try {
+        const localBlob = await getPdfBlob(targetDoc.id)
+        if (localBlob) {
+          pdfUrl = URL.createObjectURL(localBlob)
+        }
+      } catch (err) {
+        console.warn('Failed to retrieve PDF blob from IndexedDB:', err)
+      }
+    }
+
+    // 2. If still missing and we have apiId, get fresh signed URL from backend
     if (!pdfUrl && targetDoc.apiId) {
       try {
         const { getDocumentUrl } = await import('../api/documents')
         pdfUrl = await getDocumentUrl(targetDoc.apiId)
-        targetDoc.pdfUrl = pdfUrl
       } catch (err) {
         console.warn('Failed to load PDF URL from backend:', err)
       }
+    }
+
+    if (!pdfUrl) {
+      return targetDoc
     }
 
     const hasValidParagraphs =
@@ -322,35 +349,40 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
       targetDoc.paragraphs.some((p) => typeof p.text === 'string' && p.text.trim().length > 0))
 
     // If thumbnail or valid paragraphs with actual text are missing, extract them freshly
-    if (pdfUrl && (!targetDoc.thumbnail || !hasValidParagraphs)) {
+    if (!targetDoc.thumbnail || !hasValidParagraphs) {
       try {
         const pdf = await pdfjsLib.getDocument({ url: pdfUrl }).promise
         const [thumbnail, content] = await Promise.all([
           targetDoc.thumbnail ? Promise.resolve(targetDoc.thumbnail) : extractThumbnail(pdf),
           extractContent(pdf),
         ])
-        targetDoc.thumbnail = thumbnail
-        targetDoc.paragraphs = content.paragraphs
-        targetDoc.bboxes = content.bboxes
-        targetDoc.pageCount = pdf.numPages
+        const updatedDoc: StoredDocument = {
+          ...targetDoc,
+          pdfUrl,
+          thumbnail,
+          paragraphs: content.paragraphs,
+          bboxes: content.bboxes,
+          pageCount: pdf.numPages,
+        }
 
         setDocuments((prev) => {
-          const updated = prev.map((d) => (d.id === targetDoc.id ? { ...targetDoc } : d))
+          const updated = prev.map((d) => (d.id === targetDoc.id ? updatedDoc : d))
           saveLocalDocuments(updated)
           return updated
         })
+        return updatedDoc
       } catch (err) {
         console.warn('Failed to extract content in ensurePdfLoaded:', err)
       }
-    } else if (pdfUrl && targetDoc.pdfUrl !== pdfUrl) {
-      setDocuments((prev) => {
-        const updated = prev.map((d) => (d.id === targetDoc.id ? { ...targetDoc } : d))
-        saveLocalDocuments(updated)
-        return updated
-      })
     }
 
-    return targetDoc
+    // Always update React state if pdfUrl was acquired
+    setDocuments((prev) => {
+      const updated = prev.map((d) => (d.id === targetDoc.id ? { ...d, pdfUrl } : d))
+      return updated
+    })
+
+    return { ...targetDoc, pdfUrl }
   }, [])
 
   // Sync with backend on startup
@@ -467,6 +499,9 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
           pdfUrl,
         }
 
+        // Save to IndexedDB for persistent refresh support
+        savePdfBlob(doc.id, file).catch(() => {})
+
         // Try uploading to backend
         try {
           const { uploadDocument } = await import('../api/documents')
@@ -505,6 +540,7 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
             deleteDocument(doc.apiId!).catch(() => {})
           })
         }
+        deletePdfBlob(id).catch(() => {})
         const next = prev.filter((d) => d.id !== id)
         saveLocalDocuments(next)
         return next

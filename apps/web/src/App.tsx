@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { DocumentProvider, useDocuments } from './context/DocumentContext'
@@ -28,13 +29,14 @@ function LibraryRoute() {
 function ReaderRoute() {
   const navigate = useNavigate()
   const { docId, page } = useParams<{ docId: string; page: string }>()
-  const { documents, setActiveDocId, activeDoc } = useDocuments()
+  const { setActiveDocId, activeDoc } = useDocuments()
 
-  // Sync activeDocId from URL on mount / docId change
-  if (docId && activeDoc?.id !== docId) {
-    const found = documents.find((d) => d.id === docId)
-    if (found) setActiveDocId(docId)
-  }
+  // Sync activeDocId from URL cleanly via useEffect
+  useEffect(() => {
+    if (docId) {
+      setActiveDocId(docId)
+    }
+  }, [docId, setActiveDocId])
 
   const initialPage = Math.max(1, parseInt(page ?? '1', 10) || 1)
 
