@@ -27,93 +27,32 @@ interface Props {
   onBBoxClick: (idx: number) => void
 }
 
-interface CategoryStyle {
+interface BBoxStyle {
   label: string
-  color: 'cyan' | 'purple' | 'amber' | 'emerald'
   border: string
   bg: string
   glow: string
   text: string
 }
 
-function getCategoryForPara(text: string, idx: number): CategoryStyle {
-  const t = text.toLowerCase()
-  if (
-    t.includes('chapter') ||
-    t.includes('section') ||
-    t.includes('abstract') ||
-    t.includes('introduction') ||
-    text.length < 65
-  ) {
+function getBBoxStyle(idx: number, isCovered: boolean): BBoxStyle {
+  if (isCovered) {
     return {
-      label: 'Section Heading',
-      color: 'cyan',
-      border: 'rgba(6, 182, 212, 0.85)',
-      bg: 'rgba(6, 182, 212, 0.18)',
-      glow: '0 0 18px rgba(6, 182, 212, 0.55)',
-      text: '#67e8f9',
+      label: `Line #${idx + 1} · Completed`,
+      border: 'rgba(16, 185, 129, 0.85)',
+      bg: 'rgba(16, 185, 129, 0.18)',
+      glow: '0 0 16px rgba(16, 185, 129, 0.45)',
+      text: '#6ee7b7',
     }
   }
-  if (
-    t.includes('definition') ||
-    t.includes('theorem') ||
-    t.includes('principle') ||
-    t.includes('axiom') ||
-    t.includes('concept')
-  ) {
-    return {
-      label: 'Core Concept',
-      color: 'purple',
-      border: 'rgba(139, 92, 246, 0.85)',
-      bg: 'rgba(139, 92, 246, 0.18)',
-      glow: '0 0 18px rgba(139, 92, 246, 0.55)',
-      text: '#d8b4fe',
-    }
+
+  return {
+    label: `Line #${idx + 1}`,
+    border: 'rgba(34, 211, 238, 0.85)',
+    bg: 'rgba(6, 182, 212, 0.18)',
+    glow: '0 0 18px rgba(6, 182, 212, 0.55)',
+    text: '#67e8f9',
   }
-  if (
-    t.includes('formula') ||
-    t.includes('equation') ||
-    t.includes('model') ||
-    t.includes('tensor') ||
-    t.includes('matrix') ||
-    t.includes('quantum')
-  ) {
-    return {
-      label: 'Technical Formulation',
-      color: 'amber',
-      border: 'rgba(245, 158, 11, 0.90)',
-      bg: 'rgba(245, 158, 11, 0.18)',
-      glow: '0 0 18px rgba(245, 158, 11, 0.55)',
-      text: '#fde68a',
-    }
-  }
-  const fallbackList: CategoryStyle[] = [
-    {
-      label: 'Key Insight',
-      color: 'cyan',
-      border: 'rgba(6, 182, 212, 0.85)',
-      bg: 'rgba(6, 182, 212, 0.18)',
-      glow: '0 0 18px rgba(6, 182, 212, 0.55)',
-      text: '#67e8f9',
-    },
-    {
-      label: 'Theoretical Grounding',
-      color: 'purple',
-      border: 'rgba(139, 92, 246, 0.85)',
-      bg: 'rgba(139, 92, 246, 0.18)',
-      glow: '0 0 18px rgba(139, 92, 246, 0.55)',
-      text: '#d8b4fe',
-    },
-    {
-      label: 'Empirical Evidence',
-      color: 'amber',
-      border: 'rgba(245, 158, 11, 0.90)',
-      bg: 'rgba(245, 158, 11, 0.18)',
-      glow: '0 0 18px rgba(245, 158, 11, 0.55)',
-      text: '#fde68a',
-    },
-  ]
-  return fallbackList[idx % fallbackList.length]
 }
 
 function CornerBrackets({ color = 'rgba(34,211,238,0.9)' }: { color?: string }) {
@@ -939,7 +878,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                   const isActive = activeParagraphIdx === globalIdx
                   const isHovered = hoveredIdx === globalIdx
                   const isCovered = coveredBBoxIds.has(para.bboxId)
-                  const category = getCategoryForPara(para.text, globalIdx)
+                  const bboxStyle = getBBoxStyle(globalIdx, isCovered)
 
                   return (
                     <div
@@ -960,26 +899,26 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                         borderRadius: '6px',
                         cursor: 'pointer',
                         border: isActive
-                          ? `2px solid ${category.border}`
+                          ? `2px solid ${bboxStyle.border}`
                           : isHovered
-                          ? `1.5px dashed ${category.border}`
+                          ? `1.5px dashed ${bboxStyle.border}`
                           : isCovered
                           ? '1px solid rgba(16, 185, 129, 0.35)'
                           : '1px solid rgba(56,189,248,0.15)',
                         background: isActive
-                          ? category.bg
+                          ? bboxStyle.bg
                           : isHovered
                           ? 'rgba(6,182,212,0.08)'
                           : isCovered
                           ? 'rgba(16, 185, 129, 0.05)'
                           : 'transparent',
-                        boxShadow: isActive ? category.glow : 'none',
+                        boxShadow: isActive ? bboxStyle.glow : 'none',
                         transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
                         zIndex: isActive ? 25 : isHovered ? 15 : 8,
                       }}
                     >
                       {/* Corner Reticles for Active Bounding Box */}
-                      {isActive && <CornerBrackets color={category.border} />}
+                      {isActive && <CornerBrackets color={bboxStyle.border} />}
 
                       {/* Scanline Sweep Animation for Active Bounding Box */}
                       {isActive && (
@@ -995,7 +934,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                         />
                       )}
 
-                      {/* Category Label Pill floating above active or hovered chunk */}
+                      {/* Clean Line Indicator Pill floating above active or hovered chunk */}
                       {(isActive || isHovered) && (
                         <div
                           style={{
@@ -1003,8 +942,8 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                             top: '-24px',
                             left: '0',
                             background: 'rgba(10, 15, 29, 0.94)',
-                            border: `1px solid ${category.border}`,
-                            color: category.text,
+                            border: `1px solid ${bboxStyle.border}`,
+                            color: bboxStyle.text,
                             fontSize: '9.5px',
                             fontWeight: 700,
                             padding: '2px 8px',
@@ -1023,14 +962,11 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                               width: '5px',
                               height: '5px',
                               borderRadius: '50%',
-                              background: category.border,
+                              background: bboxStyle.border,
                               display: 'inline-block',
                             }}
                           />
-                          <span>{category.label}</span>
-                          <span style={{ opacity: 0.6, fontSize: '8px', fontFamily: 'monospace' }}>
-                            #{globalIdx + 1}
-                          </span>
+                          <span>{bboxStyle.label}</span>
                         </div>
                       )}
                     </div>
