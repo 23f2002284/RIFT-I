@@ -25,6 +25,8 @@ interface Props {
   doc: StoredDocument | null
   activeParagraphIdx: number
   onBBoxClick: (idx: number) => void
+  initialPage?: number
+  onPageChange?: (page: number) => void
 }
 
 interface BBoxStyle {
@@ -231,14 +233,18 @@ function EmptyViewer({ onUploadClick }: { onUploadClick: () => void }) {
   )
 }
 
-export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) {
+export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick, initialPage = 1, onPageChange }: Props) {
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer')
   const [zoomLevel, setZoomLevel] = useState(100)
   const [showThumbnails, setShowThumbnails] = useState(true)
   const [spotlightMode, setSpotlightMode] = useState(false)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(initialPage)
 
+  // Sync URL-provided initialPage into state when navigating back via browser
+  useEffect(() => {
+    setCurrentPage(initialPage)
+  }, [initialPage])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const activeBBoxRef = useRef<HTMLDivElement | null>(null)
@@ -270,7 +276,9 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
       prevActiveParaRef.current = activeParagraphIdx
       const bbox = doc.bboxes[activeParagraphIdx]
       if (bbox && bbox.pageIndex + 1 !== currentPage) {
-        setCurrentPage(bbox.pageIndex + 1)
+        const newPage = bbox.pageIndex + 1
+        setCurrentPage(newPage)
+        onPageChange?.(newPage)
       }
     }
   }, [activeParagraphIdx, doc, currentPage])
@@ -278,6 +286,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
   const goToPage = (targetPage: number) => {
     const validPage = Math.max(1, Math.min(pageCount || 1, targetPage))
     setCurrentPage(validPage)
+    onPageChange?.(validPage)
     // Synchronize transcript and active paragraph to the first chunk on the target page
     if (doc) {
       const firstOnPageIdx = doc.paragraphs.findIndex((p) => p.pageIndex === validPage - 1)
@@ -836,6 +845,9 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                   const isActive = activeParagraphIdx === globalIdx
                   const isHovered = hoveredIdx === globalIdx
                   const bboxStyle = getBBoxStyle(globalIdx)
+                  // Show first 6 words of paragraph text as the label — meaningful at a glance
+                  const labelWords = para.text.trim().split(/\s+/).slice(0, 6).join(' ')
+                  const bboxLabel = labelWords + (para.text.trim().split(/\s+/).length > 6 ? '…' : '')
 
                   return (
                     <div
@@ -919,7 +931,7 @@ export function GlassPdfViewer({ doc, activeParagraphIdx, onBBoxClick }: Props) 
                               display: 'inline-block',
                             }}
                           />
-                          <span>{bboxStyle.label}</span>
+                          <span>{bboxLabel}</span>
                         </div>
                       )}
                     </div>

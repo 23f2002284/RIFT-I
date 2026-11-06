@@ -1,36 +1,67 @@
-import { useState } from 'react'
+import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { DocumentProvider, useDocuments } from './context/DocumentContext'
 import { GlassLibraryPage } from './pages/glass/GlassLibraryPage'
 import { GlassReaderPage } from './pages/glass/GlassReaderPage'
 
-function AppInner() {
-  const [view, setView] = useState<'library' | 'reader'>('library')
-  const { activeDoc, setActiveDocId, addDocumentFromFile } = useDocuments()
+/** Library route — "/" */
+function LibraryRoute() {
+  const navigate = useNavigate()
+  const { setActiveDocId, addDocumentFromFile } = useDocuments()
 
   const enterWorkspace = async (docId?: string) => {
-    if (docId) setActiveDocId(docId)
-    setView('reader')
+    if (docId) {
+      setActiveDocId(docId)
+      navigate(`/reader/${docId}/page/1`)
+    }
   }
 
-  const goBack = () => {
-    setView('library')
+  return (
+    <GlassLibraryPage
+      onEnterWorkspace={enterWorkspace}
+      onUploadFile={addDocumentFromFile}
+    />
+  )
+}
+
+/** Reader route — "/reader/:docId/page/:page" */
+function ReaderRoute() {
+  const navigate = useNavigate()
+  const { docId, page } = useParams<{ docId: string; page: string }>()
+  const { documents, setActiveDocId, activeDoc } = useDocuments()
+
+  // Sync activeDocId from URL on mount / docId change
+  if (docId && activeDoc?.id !== docId) {
+    const found = documents.find((d) => d.id === docId)
+    if (found) setActiveDocId(docId)
   }
 
-  if (view === 'library') {
-    return (
-      <GlassLibraryPage
-        onEnterWorkspace={enterWorkspace}
-        onUploadFile={addDocumentFromFile}
-      />
-    )
+  const initialPage = Math.max(1, parseInt(page ?? '1', 10) || 1)
+
+  const handlePageChange = (newPage: number) => {
+    navigate(`/reader/${docId}/page/${newPage}`, { replace: true })
   }
+
+  const goBack = () => navigate('/')
 
   return (
     <GlassReaderPage
       doc={activeDoc}
+      initialPage={initialPage}
+      onPageChange={handlePageChange}
       onBack={goBack}
     />
+  )
+}
+
+function AppInner() {
+  return (
+    <Routes>
+      <Route path="/" element={<LibraryRoute />} />
+      <Route path="/reader/:docId/page/:page" element={<ReaderRoute />} />
+      {/* Redirect bare /reader/:docId → page 1 */}
+      <Route path="/reader/:docId" element={<ReaderRoute />} />
+    </Routes>
   )
 }
 

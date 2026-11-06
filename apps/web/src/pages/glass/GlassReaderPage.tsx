@@ -9,6 +9,8 @@ import { type StoredDocument } from '../../context/DocumentContext'
 interface Props {
   doc: StoredDocument | null
   onBack: () => void
+  initialPage?: number
+  onPageChange?: (page: number) => void
 }
 
 /** Holographic vertical resize handle */
@@ -43,7 +45,7 @@ function HorizHandle({ onDoubleClick }: { onDoubleClick?: () => void }) {
   )
 }
 
-export function GlassReaderPage({ doc, onBack }: Props) {
+export function GlassReaderPage({ doc, onBack, initialPage = 1, onPageChange }: Props) {
   const [activeParagraphIdx, setActiveParagraphIdx] = useState(0)
   const [isDictating, setIsDictating] = useState(false)
 
@@ -84,6 +86,8 @@ export function GlassReaderPage({ doc, onBack }: Props) {
                 doc={doc}
                 activeParagraphIdx={activeParagraphIdx}
                 onBBoxClick={handleBBoxClick}
+                initialPage={initialPage}
+                onPageChange={onPageChange}
               />
             </Panel>
 
