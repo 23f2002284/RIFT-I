@@ -1,0 +1,20 @@
+[project]
+name = "rift-improvisation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "asyncpg>=0.32.0",
+    "fastapi>=0.162.0",
+    "httpx>=0.28.1",
+    "pdfplumber>=0.11.10",
+    "pydantic>=2.14.2",
+    "pydantic-settings>=2.16.2",
+    "pyjwt>=2.15.1",
+    "pymupdf>=2.1",
+    "python-multipart>=0.0.33",
+    "sqlalchemy[asyncio]>=2.1.8",
+    "supabase>=2.34.0",
+    "uvicorn[standard]>=0.54.0",
+]
