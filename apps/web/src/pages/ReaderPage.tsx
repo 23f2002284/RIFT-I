@@ -26,18 +26,18 @@ export function ReaderPage({ docTitle: _docTitle, doc = null, onBack }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0d0d0d' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#020617' }}>
       {/* Slim left nav */}
       <LeftNav onHome={onBack} />
 
       {/* PDF Viewer ~55% */}
-      <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #3a2050' }}>
+      <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(56, 189, 248, 0.16)' }}>
         <PdfViewer activeParagraphIdx={activeParagraphIdx} onBBoxClick={handleBBoxClick} />
       </div>
 
       {/* Right column: Transcript top + Chat bottom */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div style={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', borderBottom: '1px solid #3a2050' }}>
+        <div style={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', borderBottom: '1px solid rgba(56, 189, 248, 0.16)' }}>
           <TranscriptPanel
             doc={doc}
             activeParagraphIdx={activeParagraphIdx}

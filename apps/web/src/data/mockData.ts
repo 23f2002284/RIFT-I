@@ -47,42 +47,72 @@ export const historyDocs: HistoryDoc[] = [
   { id: 'doc-3', title: 'Deep Space Propulsion Spec.pdf',     pages: 34, date: 'Oct 30, 2026', size: '5.3 MB' },
 ]
 
-/* ─── 5 rich paragraphs ─── */
+/* ─── 1-2 line concise script sections ─── */
 export const mockParagraphs: Paragraph[] = [
   {
     id: 'p-1',
     bboxId: 'bbox-1',
-    text: 'Quantum neural architectures leverage superposition and entanglement to encode exponentially large feature spaces within a single quantum register, enabling parallel gradient descent across all basis states simultaneously.',
+    text: 'Quantum neural architectures leverage superposition to encode exponentially large feature spaces.',
   },
   {
     id: 'p-2',
     bboxId: 'bbox-2',
-    text: 'Variational quantum circuits act as parameterised unitary transforms; their classical-quantum hybrid training loop alternates between quantum expectation measurements and classical gradient updates via the parameter-shift rule.',
+    text: 'A single quantum register enables parallel gradient descent across all basis states simultaneously.',
   },
   {
     id: 'p-3',
     bboxId: 'bbox-3',
-    text: 'Quantum advantage in RAG systems emerges when the retrieval corpus exceeds 10^9 embeddings: Grover-based nearest-neighbour search achieves O(√N) query complexity versus classical O(N), yielding sub-millisecond retrieval at planetary scale.',
+    text: 'Variational quantum circuits act as parameterised unitary transforms within Hilbert space.',
   },
   {
     id: 'p-4',
     bboxId: 'bbox-4',
-    text: 'Noise-resilient quantum attention uses surface-code error correction with a threshold of ~1%, allowing coherent multi-head self-attention across 128 logical qubits on near-term hardware without catastrophic decoherence.',
+    text: 'Their classical-quantum hybrid training loop alternates expectation measurements with gradient updates.',
   },
   {
     id: 'p-5',
     bboxId: 'bbox-5',
-    text: 'The holographic principle constrains quantum memory density to one qubit per Planck-area on the boundary surface, suggesting that future quantum LLMs will be physically bound by the black-hole information paradox at extreme scales.',
+    text: 'Quantum advantage in RAG systems emerges when retrieval corpora exceed one billion embeddings.',
+  },
+  {
+    id: 'p-6',
+    bboxId: 'bbox-6',
+    text: 'Grover-based search achieves O(√N) query complexity versus classical exhaustive O(N) scanning.',
+  },
+  {
+    id: 'p-7',
+    bboxId: 'bbox-7',
+    text: 'This algorithmic speedup yields sub-millisecond retrieval latency for planetary-scale intelligence.',
+  },
+  {
+    id: 'p-8',
+    bboxId: 'bbox-8',
+    text: 'Noise-resilient quantum attention employs surface-code error correction near a 1% threshold.',
+  },
+  {
+    id: 'p-9',
+    bboxId: 'bbox-9',
+    text: 'This enables coherent multi-head self-attention across 128 logical qubits without decoherence.',
+  },
+  {
+    id: 'p-10',
+    bboxId: 'bbox-10',
+    text: 'The holographic principle constrains quantum memory density to one qubit per Planck-area.',
   },
 ]
 
-/* ─── BBoxes (one-to-one with paragraphs) ─── */
+/* ─── BBoxes (one-to-one with 1-2 line script sections) ─── */
 export const mockBBoxes: BBox[] = [
-  { id: 'bbox-1', x: 5, y: 7,  width: 90, height: 8,  paragraphIdx: 0 },
-  { id: 'bbox-2', x: 5, y: 18, width: 90, height: 8,  paragraphIdx: 1 },
-  { id: 'bbox-3', x: 5, y: 29, width: 90, height: 8,  paragraphIdx: 2 },
-  { id: 'bbox-4', x: 5, y: 40, width: 90, height: 8,  paragraphIdx: 3 },
-  { id: 'bbox-5', x: 5, y: 51, width: 90, height: 8,  paragraphIdx: 4 },
+  { id: 'bbox-1',  x: 5, y: 7,  width: 90, height: 5, paragraphIdx: 0 },
+  { id: 'bbox-2',  x: 5, y: 13, width: 90, height: 5, paragraphIdx: 1 },
+  { id: 'bbox-3',  x: 5, y: 19, width: 90, height: 5, paragraphIdx: 2 },
+  { id: 'bbox-4',  x: 5, y: 25, width: 90, height: 5, paragraphIdx: 3 },
+  { id: 'bbox-5',  x: 5, y: 31, width: 90, height: 5, paragraphIdx: 4 },
+  { id: 'bbox-6',  x: 5, y: 37, width: 90, height: 5, paragraphIdx: 5 },
+  { id: 'bbox-7',  x: 5, y: 43, width: 90, height: 5, paragraphIdx: 6 },
+  { id: 'bbox-8',  x: 5, y: 49, width: 90, height: 5, paragraphIdx: 7 },
+  { id: 'bbox-9',  x: 5, y: 55, width: 90, height: 5, paragraphIdx: 8 },
+  { id: 'bbox-10', x: 5, y: 61, width: 90, height: 5, paragraphIdx: 9 },
 ]
 
 /* ─── Pre-loaded Q&A with both PDF and web citations ─── */

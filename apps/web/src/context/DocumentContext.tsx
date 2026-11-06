@@ -226,7 +226,7 @@ async function extractContent(pdf: pdfjsLib.PDFDocumentProxy): Promise<{
       }
     }
 
-    // 3. Group visual lines into coherent paragraphs
+    // 3. Group visual lines into concise 1-2 line script sections
     const paragraphGroups: TextLine[][] = []
     let curGroup: TextLine[] = []
 
@@ -240,17 +240,13 @@ async function extractContent(pdf: pdfjsLib.PDFDocumentProxy): Promise<{
       const verticalGap = line.top - lastLine.bottom
       const avgFontHeight = (line.fontHeight + lastLine.fontHeight) / 2
 
-      // Paragraph break conditions:
-      // - Gap is wider than normal line spacing
-      const isLargeGap = verticalGap > avgFontHeight * 0.75
-      // - Font size changes significantly (e.g. heading vs body)
-      const isFontChange = Math.abs(line.fontHeight - lastLine.fontHeight) > 3.5
-      // - Sentence ends and is followed by substantial gap or paragraph length reached
+      // Script break conditions: keep each section to 1-2 lines
+      const isLargeGap = verticalGap > avgFontHeight * 0.65
+      const isFontChange = Math.abs(line.fontHeight - lastLine.fontHeight) > 3.0
       const endsSentence = /[.:?!]$/.test(lastLine.text.trim())
-      const isNewSentenceBlock = endsSentence && verticalGap > avgFontHeight * 0.4
-      const isTooLong = curGroup.map((l) => l.text).join(' ').length > 350 && endsSentence
+      const reachedTwoLines = curGroup.length >= 2
 
-      if (isLargeGap || isFontChange || isNewSentenceBlock || isTooLong) {
+      if (reachedTwoLines || endsSentence || isLargeGap || isFontChange) {
         paragraphGroups.push(curGroup)
         curGroup = [line]
       } else {
